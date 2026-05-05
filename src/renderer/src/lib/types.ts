@@ -18,10 +18,17 @@ export type NeuzSession = {
   floatable?: boolean;
   srcOverwrite?: string;
   partitionOverwrite?: string;
+  autoDeleteCache?: boolean;
 }
 
 export type NeuzSessionState = {
   running: boolean;
+}
+
+export type NeuzSessionGroup = {
+  id: string;
+  label: string;
+  sessionIds: string[];
 }
 
 export type NeuzLayout = {
@@ -97,10 +104,12 @@ export type ConfigExportPayloadV2 = {
   keyBindProfiles?: NeuzKeyBindProfile[];
   activeKeyBindProfileId?: string | null;
   sessionActions?: SessionActions[];
+  sessionGroups?: NeuzSessionGroup[];
   window?: NeuzConfig['window'];
   sessionZoomLevels?: Record<string, number>;
   fullscreen?: NeuzConfig['fullscreen'];
   autoSaveSettings?: boolean;
+  autoDeleteAllCachesOnStartup?: boolean;
   defaultLaunchMode?: NeuzConfig['defaultLaunchMode'];
   userAgent?: string;
   titleBarButtons?: NeuzConfig['titleBarButtons'];
@@ -198,6 +207,7 @@ export type NeuzConfig = {
     sidebarSide?: 'left' | 'right';
   },
   autoSaveSettings: boolean;
+  autoDeleteAllCachesOnStartup?: boolean;
   userAgent?: string;
   defaultLaunchMode: 'normal' | 'session_launcher'
   chromium: {
@@ -211,6 +221,7 @@ export type NeuzConfig = {
   keyBinds: NeuzKeybind[]
   syncReceiverSessionId?: string | null
   sessionActions: SessionActions[];
+  sessionGroups?: NeuzSessionGroup[];
   sessionZoomLevels?: { [sessionId: string]: number };
   titleBarButtons: {
     darkModeToggle: boolean;

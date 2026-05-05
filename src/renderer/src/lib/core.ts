@@ -4,6 +4,10 @@ import type {ViewerWindowConfig, ViewerWindowType} from "./types";
 
 let electronApi: IpcRenderer | undefined = undefined;
 
+type SessionCloneResult =
+  | { success: true; stoppedBeforeClone: boolean; newId: string }
+  | { success: false; error: string };
+
 export function initElectronApi(ipcRenderer: IpcRenderer) {
   electronApi = ipcRenderer;
 }
@@ -84,6 +88,12 @@ export const neuzosBridge = {
     clearStorage: (sessionId: string) => {
       electronApi?.send("session.clear_storage", sessionId);
     },
+    getRunningIds: (): Promise<string[]> => {
+      return electronApi?.invoke("session.get_running_ids") ?? Promise.resolve([]);
+    },
+    clone: (sourceId: string): Promise<SessionCloneResult> => {
+      return electronApi?.invoke("session.clone", sourceId) ?? Promise.resolve({ success: false, error: "Electron API unavailable" });
+    },
     deleteSession: (sessionId: string): Promise<{ success: boolean; error?: string }> => {
       return electronApi?.invoke("session.delete", sessionId) ?? Promise.resolve({ success: false, error: "Electron API unavailable" });
     },
@@ -141,6 +151,11 @@ export const neuzosBridge = {
     },
     setSide: (side: 'left' | 'right') => {
       electronApi?.send('sidebar_panel.set_side', side);
+    }
+  },
+  config: {
+    save: (config: object): Promise<void> => {
+      return electronApi?.invoke('config.save', JSON.stringify(config)) ?? Promise.resolve();
     }
   }
 }

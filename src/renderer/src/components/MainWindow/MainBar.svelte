@@ -481,7 +481,7 @@
   <Separator orientation="vertical" class="h-4"/>
 
   {#if mainWindowState.config.changed}
-    <Button size="icon-xs" variant="outline" onclick={reloadConfing} class="cursor-pointer">
+    <Button size="icon-xs" variant="outline" onclick={reloadConfing} class="cursor-pointer" title="Reload config">
       <RefreshCw class="size-3.5"/>
     </Button>
   {/if}

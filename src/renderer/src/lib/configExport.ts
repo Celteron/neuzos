@@ -36,7 +36,7 @@ export const exportCategories: CategoryDefinition[] = [
   {
     id: 'general-settings',
     label: 'General Settings',
-    description: 'Autosave, launch mode, user agent, and title bar button settings.',
+    description: 'Autosave, startup cache cleanup, launch mode, user agent, and title bar button settings.',
     enabled: true,
   },
   {
@@ -71,10 +71,10 @@ function inferPayloadCategories(payload: Partial<ConfigImportPayload>): ExportCa
   if (Array.isArray((payload as ConfigExportPayloadV2).sessionActions)) {
     categories.push('session-actions');
   }
-  if ((payload as ConfigExportPayloadV2).window !== undefined || (payload as ConfigExportPayloadV2).sessionZoomLevels !== undefined || (payload as ConfigExportPayloadV2).fullscreen !== undefined) {
+  if ((payload as ConfigExportPayloadV2).window !== undefined || (payload as ConfigExportPayloadV2).sessionZoomLevels !== undefined || (payload as ConfigExportPayloadV2).fullscreen !== undefined || Array.isArray((payload as ConfigExportPayloadV2).sessionGroups)) {
     categories.push('ui-layout');
   }
-  if ((payload as ConfigExportPayloadV2).autoSaveSettings !== undefined || (payload as ConfigExportPayloadV2).defaultLaunchMode !== undefined || (payload as ConfigExportPayloadV2).userAgent !== undefined || (payload as ConfigExportPayloadV2).titleBarButtons !== undefined) {
+  if ((payload as ConfigExportPayloadV2).autoSaveSettings !== undefined || (payload as ConfigExportPayloadV2).autoDeleteAllCachesOnStartup !== undefined || (payload as ConfigExportPayloadV2).defaultLaunchMode !== undefined || (payload as ConfigExportPayloadV2).userAgent !== undefined || (payload as ConfigExportPayloadV2).titleBarButtons !== undefined) {
     categories.push('general-settings');
   }
   if (Array.isArray((payload as ConfigExportPayloadV2).questLogTemplates)) {
@@ -193,10 +193,12 @@ function cloneForExport(config: NeuzConfig, selectedCategories: ExportCategory[]
     if (config.fullscreen !== undefined) {
       payload.fullscreen = cloneValue(config.fullscreen);
     }
+    payload.sessionGroups = cloneValue(config.sessionGroups ?? []);
   }
 
   if (isCategorySelected(selectedCategories, 'general-settings')) {
     payload.autoSaveSettings = config.autoSaveSettings;
+    payload.autoDeleteAllCachesOnStartup = config.autoDeleteAllCachesOnStartup;
     payload.defaultLaunchMode = config.defaultLaunchMode;
     if (config.userAgent !== undefined) {
       payload.userAgent = config.userAgent;
@@ -229,9 +231,11 @@ export function getCategoryCountLabel(config: NeuzConfig, category: ExportCatego
       return `${getSessionActionItemCount(config.sessionActions)} action(s)`;
     case 'ui-layout': {
       const zoomCount = Object.keys(config.sessionZoomLevels ?? {}).length;
+      const groupCount = config.sessionGroups?.length ?? 0;
       const layoutPieces = [
         config.window ? 'window' : null,
         zoomCount > 0 ? `${zoomCount} zoom level(s)` : null,
+        groupCount > 0 ? `${groupCount} group(s)` : null,
         config.fullscreen ? 'fullscreen' : null,
       ].filter(Boolean);
       return layoutPieces.length > 0 ? layoutPieces.join(', ') : 'layout defaults';
@@ -239,6 +243,7 @@ export function getCategoryCountLabel(config: NeuzConfig, category: ExportCatego
     case 'general-settings': {
       const enabledSettings = [
         'autoSaveSettings',
+          'autoDeleteAllCachesOnStartup',
         'defaultLaunchMode',
         config.userAgent !== undefined ? 'userAgent' : null,
         'titleBarButtons',
@@ -300,7 +305,7 @@ function getObjectPreviewCounts(payload: ConfigImportPayload, category: 'ui-layo
   if (category === 'ui-layout') {
     const layoutPayload = payload as ConfigExportPayloadV2;
     return {
-      totalCount: ['window', 'sessionZoomLevels', 'fullscreen']
+      totalCount: ['window', 'sessionZoomLevels', 'fullscreen', 'sessionGroups']
         .filter((field) => layoutPayload[field as keyof ConfigExportPayloadV2] !== undefined)
         .length,
     };
@@ -308,7 +313,7 @@ function getObjectPreviewCounts(payload: ConfigImportPayload, category: 'ui-layo
 
   const settingsPayload = payload as ConfigExportPayloadV2;
   return {
-    totalCount: ['autoSaveSettings', 'defaultLaunchMode', 'userAgent', 'titleBarButtons']
+    totalCount: ['autoSaveSettings', 'autoDeleteAllCachesOnStartup', 'defaultLaunchMode', 'userAgent', 'titleBarButtons']
       .filter((field) => settingsPayload[field as keyof ConfigExportPayloadV2] !== undefined)
       .length,
   };

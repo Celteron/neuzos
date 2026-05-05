@@ -203,18 +203,42 @@
 
   listen('event.stop_session', (_, sessionId: string) => {
     console.log("stop_session", sessionId)
-    Object.keys(mainWindowState.sessionsLayoutsRef[sessionId]?.layouts).forEach(layoutId => {
-      console.log("stop_session", sessionId, " for layout", layoutId)
-      const neuzClient = mainWindowState.sessionsLayoutsRef[sessionId]?.layouts[layoutId]
-      if (neuzClient) {
-        console.log("stop_session", sessionId, layoutId)
-        neuzClient.stopClient()
+    const layouts = Object.values(mainWindowState.sessionsLayoutsRef[sessionId]?.layouts ?? {}) as Array<{ stopClient?: (onStopped?: () => void) => void }>
+    const stopTargets = layouts.filter((ref) => typeof ref?.stopClient === 'function')
+    if (stopTargets.length === 0) {
+      window.electron.ipcRenderer.send('event.stop_session_ack', sessionId)
+      return
+    }
+
+    let pendingStops = stopTargets.length
+    let ackSent = false
+    const onStopped = () => {
+      if (ackSent) return
+      pendingStops -= 1
+      if (pendingStops <= 0) {
+        ackSent = true
+        window.electron.ipcRenderer.send('event.stop_session_ack', sessionId)
+      }
+    }
+
+    stopTargets.forEach((neuzClient) => {
+      try {
+        neuzClient.stopClient?.(onStopped)
+      } catch (error) {
+        console.warn('Failed to stop session layout client during delete', sessionId, error)
+        onStopped()
       }
     })
   })
 
   listen('event.start_session', (_, sessionId: string, layoutId: string) => {
-    neuzosBridge.sessions.stop(sessionId)
+    // Stop all layout clients locally WITHOUT sending session.stop IPC to main.
+    // Previously called neuzosBridge.sessions.stop() here, which immediately removed
+    // the session from runningSessionIds in the main process — making getRunningIds()
+    // always return empty and the running-session delete warning never appear. (BUG-007 fix)
+    Object.keys(mainWindowState.sessionsLayoutsRef[sessionId]?.layouts ?? {}).forEach(lid => {
+      mainWindowState.sessionsLayoutsRef[sessionId]?.layouts[lid]?.stopClient()
+    })
     setTimeout(() => {
       mainWindowState.sessionsLayoutsRef[sessionId]?.layouts[layoutId].startClient()
     }, 100)
